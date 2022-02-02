@@ -29,25 +29,16 @@ public class CuentaController {
     }
 
 
-
-
-
     @GetMapping("/{id}")
     public ResponseEntity<Cuenta> detalle(@PathVariable Long id){
         return ResponseEntity.status(HttpStatus.OK).body(cuentaService.findById(id));
     }
-
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Cuenta guardar(@RequestBody Cuenta cuenta){
         return cuentaService.save(cuenta);
     }
-
-
-
-
-
 
     @PostMapping("/transferir")
     public ResponseEntity<Object> transferir(@RequestBody TransaccionDto dto){
