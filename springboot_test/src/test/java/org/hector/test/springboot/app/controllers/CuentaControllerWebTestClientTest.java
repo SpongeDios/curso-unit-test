@@ -1,11 +1,12 @@
 package org.hector.test.springboot.app.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hamcrest.Matchers;
+import org.hector.test.springboot.app.models.Cuenta;
 import org.hector.test.springboot.app.models.TransaccionDto;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -14,10 +15,12 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class) //Orden de ejecucion de los test mediante anotaciones
+//un problema de las pruebas de integracion es que, cuando se ejecuta un test afecta a los demas.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CuentaControllerWebTestClientTest {
 
@@ -32,6 +35,7 @@ class CuentaControllerWebTestClientTest {
     }
 
     @Test
+    @Order(3)
     void testTransferir() {
         //arrange
         TransaccionDto dto = new TransaccionDto();
@@ -69,4 +73,74 @@ class CuentaControllerWebTestClientTest {
                 .jsonPath("$.date").isEqualTo(LocalDate.now().toString());
 
     }
+
+    @Test
+    @Order(1)
+    void testDetalle() throws JsonProcessingException {
+
+        Cuenta cuenta = new Cuenta(1L, "Andres", new BigDecimal("1000"));
+        webTestClient.get().uri("/api/cuentas/1").exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$.nombre").isEqualTo("Andres")
+                .jsonPath("$.saldo").isEqualTo(1000)
+                .json(objectMapper.writeValueAsString(cuenta));
+    }
+
+    @Test
+    @Order(2)
+    void testDetalle2() {
+        webTestClient.get().uri("/api/cuentas/2").exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(Cuenta.class)
+                .consumeWith(response -> {
+                    Cuenta cuenta = response.getResponseBody();
+                    assertEquals("Hector", cuenta.getNombre());
+                    assertEquals(2000, cuenta.getSaldo().intValue());
+                });
+    }
+
+    @Test
+    @Order(4)
+    void testListar() {
+        webTestClient.get().uri("/api/cuentas").exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$[0].nombre").isEqualTo("Andres")
+                .jsonPath("$[0].id").isEqualTo(1)
+                .jsonPath("$[0].saldo").isEqualTo(900)
+                .jsonPath("$[1].nombre").isEqualTo("Hector")
+                .jsonPath("$[1].id").isEqualTo(2)
+                .jsonPath("$[1].saldo").isEqualTo(2100)
+                .jsonPath("$").isArray()
+                .jsonPath("$").value(Matchers.hasSize(2));
+
+    }
+
+    @Test
+    @Order(5)
+    void testListar2() {
+        webTestClient.get().uri("/api/cuentas").exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(Cuenta.class)
+                .consumeWith(response -> {
+                    List<Cuenta> cuentas = response.getResponseBody();
+                    assertEquals(2, cuentas.size());
+
+                    assertEquals(1L, cuentas.get(0).getId());
+                    assertEquals("900.0", cuentas.get(0).getSaldo().toPlainString());
+                    assertEquals("Andres", cuentas.get(0).getNombre());
+
+                    assertEquals(2L, cuentas.get(1).getId());
+                    assertEquals("2100.0", cuentas.get(1).getSaldo().toPlainString());
+                    assertEquals("Hector", cuentas.get(1).getNombre());
+                })
+                .hasSize(2)
+                .value(Matchers.hasSize(2));
+    }
+
 }
