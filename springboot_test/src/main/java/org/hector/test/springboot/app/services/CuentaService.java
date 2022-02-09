@@ -13,6 +13,10 @@ public interface CuentaService {
     Cuenta save(Cuenta cuenta);
 
     int revisarTotalTransferencias(Long bancoId);
+
     BigDecimal revisarSaldo(Long cuentaId);
+
     void transferir(Long numeroCuentaOrigen, Long numeroCuentaDestino, BigDecimal monto, Long bancoid);
+
+    void deleteById(Long id);
 }

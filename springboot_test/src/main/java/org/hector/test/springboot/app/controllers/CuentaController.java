@@ -50,4 +50,11 @@ public class CuentaController {
         response.put("transaccion", dto);
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id){
+        cuentaService.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
 }
